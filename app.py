@@ -1,49 +1,54 @@
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
 import requests
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
+
+print("Loaded API Key:", os.getenv("WEATHER_API_KEY"))  # 👈 add this
 
 app = Flask(__name__)
 
-API_KEY = os.getenv("OPENWEATHER_API_KEY")
+# Base URL for the public weather API (we'll use OpenWeatherMap)
+BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
 
-@app.route('/')
+@app.route("/")
 def home():
-    return jsonify({
-        "message": "Welcome to the Weather Flask API! Use /weather?city=CityName"
-    })
+    return jsonify({"message": "Welcome to the Weather Flask API!"})
 
-@app.route('/weather')
+@app.route("/weather", methods=["GET"])
 def get_weather():
-    city = request.args.get('city')
+    city = request.args.get("city")
     if not city:
-        return jsonify({"error": "Please provide a city name, e.g., /weather?city=London"}), 400
+        return jsonify({"error": "Please provide a city name, e.g. /weather?city=London"}), 400
 
-    base_url = "https://api.openweathermap.org/data/2.5/weather"
-    params = {
-        "q": city,
-        "appid": API_KEY,
-        "units": "metric"
-    }
+    api_key = os.getenv("WEATHER_API_KEY")
+    if not api_key:
+        return jsonify({"error": "API key not found. Please set WEATHER_API_KEY in your .env file."}), 500
 
-    response = requests.get(base_url, params=params)
-    data = response.json()
+    # Call the public weather API
+    params = {"q": city, "appid": api_key, "units": "metric"}
+    response = requests.get(BASE_URL, params=params)
 
     if response.status_code != 200:
-        return jsonify({"error": data.get("message", "Failed to get weather data")}), response.status_code
+        print("API Error:", response.status_code, response.text)  # 👈 shows the real reason
+        return jsonify({
+            "error": "Could not fetch weather data",
+            "status_code": response.status_code,
+            "details": response.text
+        }), response.status_code
 
-    weather_info = {
-        "city": data.get("name"),
+
+    data = response.json()
+    weather = {
+        "city": data["name"],
         "temperature": data["main"]["temp"],
-        "description": data["weather"][0]["description"],
-        "humidity": data["main"]["humidity"],
-        "wind_speed": data["wind"]["speed"]
+        "description": data["weather"][0]["description"]
     }
 
-    return jsonify(weather_info)
+    return jsonify(weather)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run(debug=True, port=5001)
+
+
