@@ -1,2 +1,4 @@
-# weather-flask-api
-Simple Flask API that provides weather data using a public weather API
+# Weather Flask API
+
+A simple Flask API that provides current weather data using the OpenWeatherMap public API.
+
